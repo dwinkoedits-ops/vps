@@ -1,50 +1,31 @@
-name: vps
+name: VPS Tailscale Stable
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */5 * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. Télécharge ton code automatiquement à chaque démarrage
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      # 2. Configuration SSH pour te connecter
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PUBLIC_KEY }}" > ~/.ssh/authorized_keys
-          chmod 700 ~/.ssh
-          chmod 600 ~/.ssh/authorized_keys
-          sudo service ssh start
-
-      # 3. Connexion Tailscale avec un nom fixe (hostname)
       - name: Connexion Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          hostname: chrish4x # Ton nom fixe pour SSH
-          ephemeral: true
+          # On ne met pas de hostname ici pour laisser Tailscale gérer l'ID automatiquement
+          # Cela évite les conflits si tu relances souvent
+          ephemeral: false
 
-      # 4. Auto-relance et maintien en vie
-      - name: Maintien et Auto-Relance
-        shell: bash
+      - name: Setup SSH
         run: |
-          echo "VPS lancé. Auto-relance programmée en arrière-plan."
-          
-          # On lance le compte à rebours en arrière-plan (&)
-          (
-            sleep 21000
-            curl -L \
-              -X POST \
-              -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
-              -H "Accept: application/vnd.github+json" \
-              https://api.github.com/repos/${{ github.repository }}/actions/workflows/main.yml/dispatches \
-              -d '{"ref":"main"}'
-          ) &
-          
-          echo "Le script de relance tourne en arrière-plan. Le job peut continuer."
+          sudo apt-get update && sudo apt-get install -y openssh-server
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PUBLIC_KEY }}" > ~/.ssh/authorized_keys
+          sudo service ssh start
+
+      - name: Maintien du service
+        run: |
+          # Affiche l'IP pour que tu puisses la copier dans les logs GitHub
+          echo "Connecte-toi avec : ssh runner@$(tailscale ip -4)"
+          sleep 21600
