@@ -1,0 +1,37 @@
+name: VPS-Immortel-Fixe
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # 1. Connexion Tailscale
+      - name: Connexion Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          hostname: chrish4x999hp # Nom fixe du VPS
+          ephemeral: true # Garde le réseau propre
+
+      # 2. Setup SSH avec MOT DE PASSE
+      - name: Setup SSH
+        run: |
+          sudo apt-get update && sudo apt-get install -y openssh-server
+          # Définit le mot de passe 'vps123' pour l'utilisateur runner
+          echo "runner:vps123" | sudo chpasswd
+          # Force l'acceptation des mots de passe dans SSH
+          sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo service ssh restart
+
+      # 3. Maintien en vie (Immortel)
+      - name: Maintien du service
+        run: |
+          echo "VPS chrish4x999hp est en ligne !"
+          echo "IP Tailscale : $(tailscale ip -4)"
+          # Garde le VPS actif pendant 6 heures
+          sleep 21600
