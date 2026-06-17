@@ -17,19 +17,15 @@ jobs:
           hostname: chrish4x999hp
           ephemeral: true
 
-      # 2. Montage du Google Drive (Tes fichiers immortels dans ~/mon_disque)
-      # 2. Montage du Google Drive (Corrigé)
+      # 2. Montage du Disque Immortel (La configuration est maintenant dans le secret)
       - name: Montage du Disque Immortel
         run: |
           sudo apt-get update && sudo apt-get install -y rclone
           mkdir -p ~/.config/rclone
-          # On crée le fichier de configuration au format correct
-          cat <<EOF > ~/.config/rclone/rclone.conf
-          [gdrive]
-          type = drive
-          token = ${{ secrets.RCLONE_CONFIG }}
-          EOF
+          # On écrit tout le secret directement dans le fichier de config rclone
+          echo "${{ secrets.RCLONE_CONFIG }}" > ~/.config/rclone/rclone.conf
           mkdir -p ~/mon_disque
+          # Le montage
           rclone mount gdrive: /home/runner/mon_disque --daemon --allow-other
           
       # 3. Setup SSH avec MOT DE PASSE (vps123)
