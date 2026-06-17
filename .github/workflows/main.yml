@@ -1,4 +1,4 @@
-name: VPS-Immortel-Fixe
+name: VPS-Immortel-Final
 
 on:
   workflow_dispatch:
@@ -9,29 +9,38 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # 1. Connexion Tailscale
+      # 1. Connexion Tailscale (Nom Fixe : chrish4x999hp)
       - name: Connexion Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          hostname: chrish4x999hp # Nom fixe du VPS
-          ephemeral: true # Garde le réseau propre
+          hostname: chrish4x999hp
+          ephemeral: true
 
-      # 2. Setup SSH avec MOT DE PASSE
+      # 2. Montage du Google Drive (Tes fichiers immortels dans ~/mon_disque)
+      - name: Montage du Disque Immortel
+        run: |
+          sudo apt-get update && sudo apt-get install -y rclone
+          mkdir -p ~/.config/rclone
+          echo '{"gdrive": {"type": "drive", "token": "${{ secrets.RCLONE_CONFIG }}"}}' > ~/.config/rclone/rclone.conf
+          mkdir -p ~/mon_disque
+          rclone mount gdrive: /home/runner/mon_disque --daemon --allow-other
+          
+      # 3. Setup SSH avec MOT DE PASSE (vps123)
       - name: Setup SSH
         run: |
-          sudo apt-get update && sudo apt-get install -y openssh-server
-          # Définit le mot de passe 'vps123' pour l'utilisateur runner
+          sudo apt-get install -y openssh-server
+          # On force le mot de passe 'vps123'
           echo "runner:vps123" | sudo chpasswd
-          # Force l'acceptation des mots de passe dans SSH
+          # On autorise la connexion par mot de passe
           sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
           sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
           sudo service ssh restart
 
-      # 3. Maintien en vie (Immortel)
+      # 4. Maintien en vie
       - name: Maintien du service
         run: |
-          echo "VPS chrish4x999hp est en ligne !"
-          echo "IP Tailscale : $(tailscale ip -4)"
-          # Garde le VPS actif pendant 6 heures
+          echo "--- VPS chrish4x999hp EN LIGNE ---"
+          echo "Connecte-toi avec : ssh runner@chrish4x999hp"
+          echo "Mot de passe : vps123"
           sleep 21600
