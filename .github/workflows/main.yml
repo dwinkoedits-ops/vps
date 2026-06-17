@@ -1,4 +1,4 @@
-name: VPS Immortel
+name: vps
 
 on:
   workflow_dispatch:
@@ -9,9 +9,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      # 1. Télécharge ton code automatiquement à chaque démarrage
+      - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2. Configuration SSH pour te connecter
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -20,25 +22,33 @@ jobs:
           chmod 600 ~/.ssh/authorized_keys
           sudo service ssh start
 
+      # 3. Connexion Tailscale avec un nom fixe (hostname)
       - name: Connexion Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          hostname: chrish4x # Ton nom fixe pour SSH
+          ephemeral: true
 
+      # 4. Auto-relance et maintien en vie
       - name: Maintien et Auto-Relance
         shell: bash
         run: |
-          echo "VPS lancé. Auto-relance programmée en arrière-plan."
-          
-          # On lance le compte à rebours en arrière-plan (&)
+          echo "VPS démarré. Auto-relance dans 5h50."
           (
             sleep 21000
             curl -L \
               -X POST \
               -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
               -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
               https://api.github.com/repos/${{ github.repository }}/actions/workflows/main.yml/dispatches \
               -d '{"ref":"main"}'
           ) &
           
-          echo "Le script de relance tourne en arrière-plan. Le job peut continuer."
+          # Ici, tu peux lancer ton bot directement s'il est dans ton dépôt
+          # npm install
+          # pm2 start index.js --name "mon-bot"
+          
+          echo "Le script attend en arrière-plan."
+          sleep 21600 # Garde le processus actif jusqu'à la fin
