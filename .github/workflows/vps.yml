@@ -18,11 +18,17 @@ jobs:
           ephemeral: true
 
       # 2. Montage du Google Drive (Tes fichiers immortels dans ~/mon_disque)
+      # 2. Montage du Google Drive (Corrigé)
       - name: Montage du Disque Immortel
         run: |
           sudo apt-get update && sudo apt-get install -y rclone
           mkdir -p ~/.config/rclone
-          echo '{"gdrive": {"type": "drive", "token": "${{ secrets.RCLONE_CONFIG }}"}}' > ~/.config/rclone/rclone.conf
+          # On crée le fichier de configuration au format correct
+          cat <<EOF > ~/.config/rclone/rclone.conf
+          [gdrive]
+          type = drive
+          token = ${{ secrets.RCLONE_CONFIG }}
+          EOF
           mkdir -p ~/mon_disque
           rclone mount gdrive: /home/runner/mon_disque --daemon --allow-other
           
