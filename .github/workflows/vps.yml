@@ -9,7 +9,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # 1. Connexion Tailscale (Nom fixe : chrish4x999hp)
       - name: Connexion Tailscale
         uses: tailscale/github-action@v2
         with:
@@ -17,31 +16,17 @@ jobs:
           hostname: chrish4x999hp
           ephemeral: true
 
-      # 2. Montage du Disque Immortel (Version robuste avec délai)
-      - name: Montage du Disque Immortel
+      # 1. Synchronisation initiale : Télécharge tout du Drive vers le VPS
+      - name: Synchronisation du Drive vers VPS
         run: |
           sudo apt-get update && sudo apt-get install -y rclone
           mkdir -p ~/.config/rclone
-          # Décodage du secret Base64
           echo "${{ secrets.RCLONE_CONFIG_TOKEN }}" | base64 -d > ~/.config/rclone/token.json
-          # Création du fichier de config
           printf "[gdrive]\ntype = drive\nscope = drive\ntoken = %s\nteam_drive =\n" "$(cat ~/.config/rclone/token.json)" > ~/.config/rclone/rclone.conf
           mkdir -p ~/mon_disque
-          
-          # Montage avec des paramètres de patience
-          rclone mount gdrive: /home/runner/mon_disque --daemon --allow-other --vfs-cache-mode writes
-          
-          # Attendre que le montage soit réellement prêt
-          echo "Attente de la connexion au cloud..."
-          sleep 10
-          if mount | grep -q 'gdrive'; then
-            echo "Disque monté avec succès !"
-          else
-            echo "Erreur : Le disque n'est pas prêt, tentative de remontage..."
-            rclone mount gdrive: /home/runner/mon_disque --daemon --allow-other
-          fi
-          
-      # 3. Setup SSH avec MOT DE PASSE (vps123)
+          rclone sync gdrive: ~/mon_disque
+          echo "Données récupérées !"
+
       - name: Setup SSH
         run: |
           sudo apt-get install -y openssh-server
@@ -50,11 +35,15 @@ jobs:
           sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
           sudo service ssh restart
 
-      # 4. Maintien en vie
       - name: Maintien du service
         run: |
           echo "--- VPS chrish4x999hp EN LIGNE ---"
-          echo "Connecte-toi : ssh runner@chrish4x999hp"
-          echo "Mot de passe : vps123"
-          echo "Disque monté dans : ~/mon_disque"
           sleep 21600
+        # 2. Sauvegarde automatique avant la fin (même si le job est annulé)
+        if: always()
+      
+      - name: Sauvegarde vers le Drive
+        if: always()
+        run: |
+          rclone sync ~/mon_disque gdrive:
+          echo "Sauvegarde terminée."
