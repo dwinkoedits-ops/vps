@@ -47,7 +47,7 @@ jobs:
           echo "Fichiers prêts pour l'extraction."
 
       - name: Upload Artifact vers GitHub (Pour téléchargement local)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vps-data-dump
           path: ~/backup_extract.zip
@@ -59,11 +59,10 @@ jobs:
           echo "--- VPS chrish4x999hp EN LIGNE ---"
           echo "Tu peux maintenant te connecter en SSH via Tailscale IP !"
           sleep 21600
-        if: always()
       
       # 5. Sauvegarde automatique avant la fin
       - name: Sauvegarde vers le Drive
-        if: always()
+        if: always() # Garde la sauvegarde même si ça crash
         run: |
           # On sauvegarde ce qui est dans le dossier local vers le drive
           rclone sync ~/mon_disque gdrive:
