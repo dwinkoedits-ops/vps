@@ -16,16 +16,19 @@ jobs:
           hostname: chrish4x999hp
           ephemeral: true
 
-      # 1. Synchronisation initiale : Télécharge tout du Drive vers le VPS
-      - name: Synchronisation du Drive vers VPS
+      # 1. Synchronisation initiale : Télécharge tout du Drive vers le Runner
+      - name: Synchronisation du Drive vers Runner
         run: |
           sudo apt-get update && sudo apt-get install -y rclone
           mkdir -p ~/.config/rclone
           echo "${{ secrets.RCLONE_CONFIG_TOKEN }}" | base64 -d > ~/.config/rclone/token.json
           printf "[gdrive]\ntype = drive\nscope = drive\ntoken = %s\nteam_drive =\n" "$(cat ~/.config/rclone/token.json)" > ~/.config/rclone/rclone.conf
           mkdir -p ~/mon_disque 
-          echo "Données récupérées !"
+          # On sync le drive DANS le dossier local
+          rclone sync gdrive: ~/mon_disque
+          echo "Données du Drive récupérées localement !"
 
+      # 2. Setup SSH (Access direct)
       - name: Setup SSH
         run: |
           sudo apt-get install -y openssh-server
@@ -33,16 +36,35 @@ jobs:
           sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
           sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
           sudo service ssh restart
+          echo "--- SSH ACTIF --- user: runner / pass: vps123"
 
+      # 3. EXTRACT AND DOWNLOAD : Prepare files to grab locally
+      - name: Préparation du téléchargement
+        run: |
+          cd ~/mon_disque
+          # On compresse tout ce que tu as récupéré
+          zip -r ~/backup_extract.zip .
+          echo "Fichiers prêts pour l'extraction."
+
+      - name: Upload Artifact vers GitHub (Pour téléchargement local)
+        uses: actions/upload-artifact@v3
+        with:
+          name: vps-data-dump
+          path: ~/backup_extract.zip
+          retention-days: 1
+
+      # 4. Maintien du service (Sleep)
       - name: Maintien du service
         run: |
           echo "--- VPS chrish4x999hp EN LIGNE ---"
+          echo "Tu peux maintenant te connecter en SSH via Tailscale IP !"
           sleep 21600
-        # 2. Sauvegarde automatique avant la fin (même si le job est annulé)
         if: always()
       
+      # 5. Sauvegarde automatique avant la fin
       - name: Sauvegarde vers le Drive
         if: always()
         run: |
+          # On sauvegarde ce qui est dans le dossier local vers le drive
           rclone sync ~/mon_disque gdrive:
           echo "Sauvegarde terminée."
