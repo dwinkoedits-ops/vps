@@ -24,7 +24,7 @@ jobs:
           echo "${{ secrets.RCLONE_CONFIG_TOKEN }}" | base64 -d > ~/.config/rclone/token.json
           printf "[gdrive]\ntype = drive\nscope = drive\ntoken = %s\nteam_drive =\n" "$(cat ~/.config/rclone/token.json)" > ~/.config/rclone/rclone.conf
           mkdir -p ~/mon_disque
-          rclone sync gdrive: ~/mon_disque
+          #rclone sync gdrive: ~/mon_disque
           echo "Données récupérées !"
 
       - name: Setup SSH
