@@ -17,17 +17,29 @@ jobs:
           hostname: chrish4x999hp
           ephemeral: true
 
-      # 2. Montage du Disque Immortel (Décodage Base64)
+      # 2. Montage du Disque Immortel (Version robuste avec délai)
       - name: Montage du Disque Immortel
         run: |
           sudo apt-get update && sudo apt-get install -y rclone
           mkdir -p ~/.config/rclone
-          # Décodage propre du secret Base64
+          # Décodage du secret Base64
           echo "${{ secrets.RCLONE_CONFIG_TOKEN }}" | base64 -d > ~/.config/rclone/token.json
           # Création du fichier de config
           printf "[gdrive]\ntype = drive\nscope = drive\ntoken = %s\nteam_drive =\n" "$(cat ~/.config/rclone/token.json)" > ~/.config/rclone/rclone.conf
           mkdir -p ~/mon_disque
-          rclone mount gdrive: /home/runner/mon_disque --daemon --allow-other
+          
+          # Montage avec des paramètres de patience
+          rclone mount gdrive: /home/runner/mon_disque --daemon --allow-other --vfs-cache-mode writes
+          
+          # Attendre que le montage soit réellement prêt
+          echo "Attente de la connexion au cloud..."
+          sleep 10
+          if mount | grep -q 'gdrive'; then
+            echo "Disque monté avec succès !"
+          else
+            echo "Erreur : Le disque n'est pas prêt, tentative de remontage..."
+            rclone mount gdrive: /home/runner/mon_disque --daemon --allow-other
+          fi
           
       # 3. Setup SSH avec MOT DE PASSE (vps123)
       - name: Setup SSH
