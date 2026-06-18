@@ -17,15 +17,13 @@ jobs:
           hostname: chrish4x999hp
           ephemeral: true
 
-      # 2. Montage du Disque Immortel (La configuration est maintenant dans le secret)
       - name: Montage du Disque Immortel
         run: |
           sudo apt-get update && sudo apt-get install -y rclone
           mkdir -p ~/.config/rclone
-          # On écrit tout le secret directement dans le fichier de config rclone
-          echo "${{ secrets.RCLONE_CONFIG }}" > ~/.config/rclone/rclone.conf
+          # On utilise printf pour éviter les problèmes d'interprétation des guillemets
+          printf '[gdrive]\ntype = drive\nscope = drive\ntoken = %s\nteam_drive =\n' "${{ secrets.RCLONE_CONFIG_TOKEN }}" > ~/.config/rclone/rclone.conf
           mkdir -p ~/mon_disque
-          # Le montage
           rclone mount gdrive: /home/runner/mon_disque --daemon --allow-other
           
       # 3. Setup SSH avec MOT DE PASSE (vps123)
